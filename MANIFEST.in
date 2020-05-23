@@ -1,0 +1,10 @@
+# Include the license file
+include LICENSE
+include README.md
+include setup.*
+
+# Include the data files
+recursive-include django_change_list/static *
+recursive-include django_change_list/templates *
+
+recursive-exclude test_app_django_changes/ *
