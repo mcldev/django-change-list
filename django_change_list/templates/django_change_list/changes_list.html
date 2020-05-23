@@ -1,0 +1,18 @@
+{% load changes_tags %}
+
+{% regroup changes by release as changes_by_release %}
+{% for release, release_changes in changes_by_release %}
+    <h3>{{ release.version_txt }}</h3>
+    {% regroup release_changes by get_change_type as changes_by_type %}
+    {% for change_type, change_list in changes_by_type %}
+        <ul class="list-group">
+            <li class="list-group-item list-group-item-{{ change_type|css_class_by_type }}">{{ change_type }}</li>
+            {% for change in change_list %}
+                <li class="list-group-item">{{ change.header|truncatechars:100 }}</li>
+            {% endfor %}
+        </ul>
+    {% empty %}
+        <h1>Nuffin!</h1>
+    {% endfor %}
+{% endfor %}
+

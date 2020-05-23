@@ -1,0 +1,39 @@
+{% load crispy_forms_tags %}
+
+<p>To see all Long-term Support versions, click here:
+    <a href="https://www.djangoproject.com/download/#supported-versions" target="_blank">Django Roadmap</a></p>
+
+<form method="post" id="changes-form" {% if is_vue %} v-on:submit.prevent="processForm" {% endif %}>
+    {% csrf_token %}
+    <div class="form-row">
+        <div class="col-md-9">
+            <div class="row">
+                <div class="col-sm">
+                    {{ changes_form.from_version|as_crispy_field }}
+                </div>
+                <div class="col-sm">
+                    {{ changes_form.to_version|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="form-row form-check form-check-inline">
+                {% for field in changes_form %}
+                    {% if field.name|slice:12 == "change_type_" %}
+                        {{ field|as_crispy_field }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-3 d-flex justify-content-center align-items-center">
+            <button id="btn-get-results" type="submit" class="btn btn-primary btn-lg" style="min-height:70%">Get Changes</button>
+        </div>
+
+        {% if is_vue %}
+            <div class="col-sm" v-cloak>
+                <small>From version: [[ from_version ]] to: [[ to_version ]] for change types: [[ change_types ]]</small>
+            </div>
+        {% endif %}
+    </div>
+</form>
+
+

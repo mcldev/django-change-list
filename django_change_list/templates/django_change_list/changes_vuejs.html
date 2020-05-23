@@ -1,0 +1,371 @@
+{% extends "django_change_list/base.html" %}
+{% load static sekizai_tags %}
+
+{% block sekizai_block %}
+
+    {% addtoblock 'css' %}
+        <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.16.0/dist/bootstrap-table.min.css">
+    {% endaddtoblock %}
+    {% addtoblock 'css' %}
+        <style>
+            [v-cloak] {
+                display: none;
+            }
+        </style>
+    {% endaddtoblock %}
+
+    {% addtoblock 'js' %}
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script src="https://unpkg.com/vue-cookies@1.7.0/vue-cookies.js"></script>
+    {% endaddtoblock %}
+
+    {% addtoblock 'js' %}
+        {# Bootstrap Table #}
+        <script src="https://unpkg.com/bootstrap-table@1.16.0/dist/bootstrap-table.min.js"></script>
+        <script src="https://unpkg.com/bootstrap-table@1.16.0/dist/bootstrap-table-vue.min.js"></script>
+        {# Bootstrap Table - Export #}
+        <script src="https://unpkg.com/file-saver@2.0.2/dist/FileSaver.min.js"></script>
+        <script src="https://unpkg.com/xlsx@0.16.1/dist/xlsx.core.min.js"></script>
+        <script src="https://unpkg.com/tableexport.jquery.plugin/tableExport.min.js"></script>
+        <script src="https://unpkg.com/bootstrap-table@1.16.0/dist/extensions/export/bootstrap-table-export.min.js"></script>
+        {# Bootstrap Table - Filter #}
+        <script src="https://unpkg.com/bootstrap-table@1.16.0/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
+    {% endaddtoblock %}
+
+{% endblock %}
+
+
+{% block status %}
+    <div id="status-app" v-cloak v-if="status">
+        <div id="status" class="alert " v-bind:class="statusClass" role="alert">
+            <span v-if="status == 'loading'"> <i class="fa fa-spinner fa-pulse fa-fw"></i></span>
+            <span v-if="statusMsg" id="status-message">[[ statusMsg ]]</span>
+        </div>
+        <hr class="mt-0 mb-4">
+    </div>
+{% endblock %}
+
+
+{% block results %}
+    <div id="table-toolbar" class="toolbar">
+        <button class="btn btn-secondary dropdown-toggle" aria-label="Export" data-toggle="dropdown" type="button"
+                title="Export Jira">
+            <i class="fab fa-jira"></i>
+            <span class="caret"></span> Export to Jira
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" x-placement="bottom-end">
+            <a class="dropdown-item " href="#" data-selected="selected" onclick="export_to_jira(this)">Selected
+                Items</a>
+            <a class="dropdown-item " href="#" data-selected="all" onclick="export_to_jira(this)">All Items</a>
+        </div>
+    </div>
+
+    <div id="results-table">
+        <bootstrap-table id="output-table" :columns="columns" :data="data" :options="options"></bootstrap-table>
+    </div>
+{% endblock %}
+
+
+
+{% block java_script %}
+    <script>
+
+        // --------------------- INPUT FORM ---------------------
+
+        var init_form_data = {{ init_values }};
+        const COOKIE_NAME = 'previous_query';
+
+        function save_query_data(from_version, to_version, change_types) {
+            $cookies.set(COOKIE_NAME,
+                JSON.stringify({
+                    'from_version': from_version,
+                    'to_version': to_version,
+                    'change_types': change_types,
+                })
+            )
+        }
+
+        function get_init_data() {
+            if ($cookies.isKey(COOKIE_NAME)) {
+                return $cookies.get(COOKIE_NAME);
+            } else {
+                return init_form_data;
+            }
+        }
+
+        var app_changes_form = new Vue({
+                el: '#changes-form',
+                delimiters: ['[[', ']]'],
+                data: get_init_data,
+                methods: {
+                    processForm: function () {
+                        // Update Cookie
+                        save_query_data(this.from_version, this.to_version, this.change_types);
+                        get_change_data(this.from_version, this.to_version, this.change_types);
+                    }
+                },
+            })
+        ;
+
+        // --------------------- STATUS BAR ---------------------
+
+        var app_status = new Vue({
+            el: '#status-app',
+            delimiters: ['[[', ']]'],
+            data: {
+                status: null,
+                statusMsg: '',
+            },
+            methods: {
+                updateStatus: function (status, msg = '') {
+                    this.status = status;
+                    this.statusMsg = msg;
+                }
+            },
+            computed: {
+                statusClass: function () {
+                    return {
+                        'alert-primary': this.status === 'loading',
+                        'alert-error': this.status === 'error',
+                        'alert-secondary': this.status === 'success',
+                        'alert-success': this.status === 'complete',
+                    }
+                }
+            }
+        });
+
+        // --------------------- TABLE OUTPUT ---------------------
+        {# https://bootstrap-table.com/docs/vuejs/introduction/   #}
+
+        table_columns = [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                title: 'Release',
+                field: 'get_release_version',
+                sortable: true,
+                filterControl: 'input',
+            },
+            {
+                title: 'Type',
+                field: 'get_change_type',
+                cellStyle: cellStyle,
+                sortable: true,
+                filterControl: 'select',
+            },
+            {
+                title: 'Summary',
+                field: 'summary',
+                sortable: true,
+                filterControl: 'input',
+            },
+            {
+                title: 'Detail Text',
+                field: 'details_text',
+                visible: false,
+                filterControl: 'input',
+            },
+            {
+                title: 'Jira Issue Type',
+                field: 'get_jira_issue_type',
+                sortable: true,
+                visible: false,
+            },
+            {
+                title: 'Change Link',
+                field: 'change_link',
+                sortable: false,
+                visible: false,
+                formatter: linkFormatter,
+            }
+        ]
+
+        table_options = {
+            search: true,
+            showColumns: true,
+            showColumnsToggleAll: true,
+            {#multipleSelectRow: true,#}
+            mobileResponsive: true,
+            //Detail View
+            detailView: true,
+            detailViewIcon: true,
+            detailViewByClick: true,
+            detailFormatter: detailFormatter,
+            //Sorting
+            customSort: release_sort,
+            //Filter Control
+            filterControl: true,
+            //Export
+            showExport: true,
+            exportDataType: 'selected',
+            exportTypes: ['json', 'xml', 'csv', 'txt', 'xlsx',],
+            exportOptions: {
+                fileName: function () {
+                    return 'change_list_' + app_changes_form.from_version + '-' + app_changes_form.to_version
+                },
+                ignoreColumn: [0, 1],
+            },
+            //Custom Buttons
+            toolbar: "#table-toolbar",
+            toolbarAlign: "right",
+        }
+
+        function release_sort(sortName, sortOrder, data) {
+            var order = sortOrder === 'desc' ? -1 : 1
+            if (sortName === "get_release_version") {
+                sortName = 'get_release_version_int';
+            }
+            data.sort(function (a, b) {
+                var aa = a[sortName]
+                var bb = b[sortName]
+                if (aa < bb) {
+                    return order * -1
+                }
+                if (aa > bb) {
+                    return order
+                }
+                return 0
+            })
+        }
+
+        function linkFormatter(value, row, index) {
+            html = [];
+            html.push('<a href="' + value + '" target="_blank">');
+            html.push(value + '</a>');
+            return html.join('')
+        }
+
+        function detailFormatter(index, row) {
+            var html = []
+            html.push('<p><b>Change Release Version: </b>' + row['get_release_version'] + ' - ' + row['get_change_type'] + '</p>')
+            html.push('<p><b>Link to docs: </b><a target="_blank" href="' + row['change_link'] + '">' + row['change_link'] + '</a></p>')
+            html.push('<p><b>Change Details: </b></p>')
+            html.push(row['details_html'])
+            return html.join('')
+        }
+
+        function cellStyle(value, row, index, field) {
+            return {
+                classes: row['get_css_name'],
+            }
+        }
+
+        var app_table_list = new Vue({
+            el: '#results-table',
+            components: {
+                'BootstrapTable': BootstrapTable,
+            },
+            data: {
+                columns: table_columns,
+                data: [],
+                options: table_options,
+            },
+            methods: {
+                updateTable: function (resp) {
+                    this.data = resp.data;
+                },
+                num_table_rows: function () {
+                    return this.data.length;
+                },
+                get_selected_rows: function () {
+                    return this.$children[0].getAllSelections();
+                },
+                get_all_rows: function () {
+                    return this.data;
+                },
+            },
+        });
+
+        // --------------------- AJAX QUERIES ---------------------
+
+        function get_change_data(from_version, to_version, change_types) {
+            var data = {
+                'from_version': from_version,
+                'to_version': to_version,
+                'change_types': change_types,
+            }
+            $.ajaxSetup({
+                headers: {"X-CSRFToken": '{{ csrf_token }}'},
+            });
+            return $.ajax({
+                type: 'POST',
+                url: "{% url 'change_views:json_view' %}",
+
+                async: true,
+                data: JSON.stringify(data),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                beforeSend: function () {
+                    app_status.updateStatus('loading', 'Loading Changes...');
+                },
+                success: function (resp) {
+                    app_status.updateStatus('success',);
+                    console.log('rows loaded: ' + resp.data.length)
+                    app_table_list.updateTable(resp);
+                },
+                complete: function () {
+                    app_status.updateStatus('complete', 'Loaded rows: ' + app_table_list.num_table_rows());
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    app_status.updateStatus('error', textStatus);
+                }
+            });
+        }
+
+        // --------------------- EXPORT TO JIRA ---------------------
+
+        function export_to_jira(e) {
+            select_rows = e.getAttribute('data-selected');
+            data = get_selected_data(select_rows);
+            json_data = JSON.stringify(data);
+
+            qry_params = $cookies.get(COOKIE_NAME)
+            download_file_name = 'jira_django_changes_' + qry_params.from_version + '-' + qry_params.to_version + '.csv'
+
+            // Ajax query to get file
+            $.ajaxSetup({
+                headers: {"X-CSRFToken": '{{ csrf_token }}'},
+                contentType: "application/json; charset=utf-8",
+            });
+            $.post("{% url 'change_views:jira_export' %}", json_data, function (result, status, xhr) {
+                var blob = new Blob([result]);
+                var link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = download_file_name;
+                link.click();
+            });
+        }
+
+        function get_selected_data(selected_or_all) {
+            if (selected_or_all === "selected") {
+                // Get the ids of each row for a query
+                var ids_to_get = [];
+                rows_to_get = app_table_list.get_selected_rows();
+                rows_to_get.forEach(get_ids);
+                function get_ids(value, index, array) {
+                    ids_to_get.push(value.id);
+                }
+
+                if (ids_to_get.length >= 1000) {
+                    alert('Too many rows selected! > 999');
+                    throw('too many rows selected');
+                } else if (ids_to_get.length === 0) {
+                    alert('No rows selected!');
+                    throw('no rows selected');
+                }
+
+                return {
+                    ids_to_get: ids_to_get,
+                }
+
+            } else {
+                //Return the query params to re-run for jira format
+                return $cookies.get(COOKIE_NAME)
+            }
+        }
+
+    </script>
+
+{% endblock %}

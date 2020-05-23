@@ -1,0 +1,47 @@
+{% extends "django_change_list/base.html" %}
+
+{% block java_script %}
+
+<script type="text/javascript">
+
+    function get_changes(form) {
+        //Get Data from Form
+        var data = form.serializeArray().reduce(function (obj, item) {
+            obj[item.name] = item.value;
+            return obj;
+        }, {});
+
+        //Submit via Ajax
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'change_views:ajax_html_view' %}",
+            async: false,
+            data: data,
+            beforeSend: function () {
+                $(".search-loading").show();
+                $("#results").empty();
+            },
+            complete: function () {
+                $(".search-loading").hide();
+            },
+            success: function (data) {
+                console.log(data);
+                $('#results').empty().append(data);
+            },
+            error: function (err) {
+
+            }
+        });
+    }
+
+    jQuery(document).ready(function ($) {
+        $(".search-loading").hide();
+
+        $("#changes-form").on('submit', function (event) {
+            event.preventDefault();
+
+            get_changes($(this));
+        });
+    })
+</script>
+{% endblock %}
