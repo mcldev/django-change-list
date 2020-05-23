@@ -21,7 +21,7 @@ class ChangeModel(models.Model):
     change_link = models.URLField('Link to Change Notes')
     change_type = models.IntegerField('Change Type')
 
-    summary = models.CharField('Change Summary', max_length=100)
+    summary = models.CharField('Change Summary', max_length=256)
     details_html = models.TextField('Change Details in HTML')
     details_text = models.TextField('Change Details in Plain Text')
 
