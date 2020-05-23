@@ -1,4 +1,4 @@
-# Django Changes
+# Django Change List
 
 An app to scrape and list the Django Release Notes: 
  [https://docs.djangoproject.com/en/3.0/releases/][here]
@@ -13,7 +13,7 @@ It also has the capacity to export in various file formats, including Jira compa
 
 1. Install from Git
     ``` shell script
-    pip install -e
+    pip install -e git+https://github.com/mcldev/django-change-list#egg=django-change-list
     ```
 2. Add the following settings:
     * Installed Apps in Settings:
