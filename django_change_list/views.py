@@ -1,15 +1,13 @@
 import csv
+import json
 
 from django.http import JsonResponse, HttpResponse, Http404
 from django.shortcuts import render
-import json
-from django.db.models import Value, F
-from django.utils.safestring import mark_safe
 
+from .consts import *
+from .forms import *
 from .models import *
 from .utils import get_changes
-from .forms import *
-from .consts import *
 
 
 def index_view_html(request):
@@ -48,7 +46,11 @@ def get_changes_from_request(request):
             if change_val:
                 change_types.append(change_type.value)
 
-    changes = get_changes(from_version, to_version, change_types)
+    force_rebuild = False
+    if request.user.is_authenticated and params.get('force_rebuild', False):
+        force_rebuild = True
+
+    changes = get_changes(from_version, to_version, change_types, force_rebuild)
 
     return changes
 

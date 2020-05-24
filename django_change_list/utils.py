@@ -8,13 +8,26 @@ from .models import ReleaseModel, ChangeModel
 from .consts import *
 
 
-def clean_string(str):
-    if str:
-        encoded_string = str.encode("ascii", "ignore")
-        decode_string = encoded_string.decode()
-        clean_string = decode_string.replace('\n', ' ').strip()
+def clean_string(element, return_str=True, base_url=None):
+    if not element:
+        return
 
-        return clean_string
+    if return_str:
+        str = element.text
+    else:
+        if base_url:
+            for a in element.findAll('a'):
+                if not a['href'].startswith('http'):
+                    base_url = base_url if base_url.endswith('/') else base_url + '/'
+                    a['href'] = "{}{}".format(base_url, a['href'])
+                    a['target'] = "_blank"
+        str = element.prettify()
+
+    encoded_string = str.encode("ascii", "ignore")
+    decode_string = encoded_string.decode()
+    str = decode_string.replace('\n', ' ').strip()
+
+    return str
 
 
 def get_release_urls():
@@ -39,7 +52,7 @@ def get_release_urls():
     return links_and_versions
 
 
-def get_changes(from_version=None, to_version=None, change_types=None):
+def get_changes(from_version=None, to_version=None, change_types=None, force_rebuild=False):
     # Get the latest version of all current versions
     all_releases = get_release_urls()
     change_types = change_types or all_change_types()
@@ -61,11 +74,14 @@ def get_changes(from_version=None, to_version=None, change_types=None):
             # Get rows if missing
             release_model, created = ReleaseModel.objects.get_or_create(version_txt=get_version, version_link=link)
 
-            if created:
+            if not created and force_rebuild:
+                ChangeModel.objects.filter(release=release_model).delete()
+
+            if created or force_rebuild:
                 print('Getting changes for version: {}'.format(get_version))
-                release_model.save()
                 # Get's changes for all change types
                 get_changes_for_version(release_model)
+                release_model.save()
 
             # Add to bulk query list
             query_versions.append(release_model)
@@ -92,31 +108,32 @@ def get_changes(from_version=None, to_version=None, change_types=None):
 
 def recursive_find_sections(release_model, change_type, section, heading, link, heading_level=2):
     ret = []
-    sub_sections = section.find_all("div", {"class": "section"})
+    sub_sections = section.find_all("div", {"class": "section"}, recursive=False)
+    base_link = link.split('#')[0]
 
     if sub_sections:
         heading_level += 1
         for sect in sub_sections:
             sect_heading = sect.find("h{}".format(heading_level))
             if sect_heading:
-                sect_heading = clean_string(sect_heading.text) or heading
+                sect_heading = clean_string(sect_heading) or heading
             sect_id = sect["id"]
             if sect_id:
-                link = link.split('#')[0] + "#{}".format(sect_id)
+                link = base_link + "#{}".format(sect_id)
             ret += recursive_find_sections(release_model, change_type, sect, sect_heading, link, heading_level)
     else:
-        list_sections = section.find_all("li")
+        list_sections = section.find_all("ul", recursive=False)
         if list_sections:
-            for list_item in list_sections:
-                ret += recursive_find_sections(release_model, change_type, list_item, heading, link,
-                                               heading_level)
+            for lst in list_sections:
+                list_items = lst.find_all("li", recursive=False)
+                for list_item in list_items:
+                    ret += recursive_find_sections(release_model, change_type, list_item, heading, link, heading_level)
         else:
-            heading = clean_string(heading)
-            summary = clean_string(section.text)[:99]
+            summary = clean_string(section)[:99]
             if heading and not summary.startswith(heading):
                 summary = "{} - {}".format(heading, summary)
-            details_html = clean_string(section.prettify())
-            details_text = clean_string(section.text)
+            details_html = clean_string(section, False, base_link)
+            details_text = clean_string(section)
 
             ret.append(ChangeModel(release=release_model,
                                    change_link=link,

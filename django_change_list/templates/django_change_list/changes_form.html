@@ -26,6 +26,9 @@
         </div>
         <div class="col-md-3 d-flex justify-content-center align-items-center">
             <button id="btn-get-results" type="submit" class="btn btn-primary btn-lg" style="min-height:70%">Get Changes</button>
+            {% if request.user.is_authenticated %}
+                <button id="btn-rebuild-results" v-on:click="forceRebuild" type="submit" class="btn btn-danger btn-lg" style="min-height:70%">Rebuild Change List</button>
+            {% endif %}
         </div>
 
         {% if is_vue %}

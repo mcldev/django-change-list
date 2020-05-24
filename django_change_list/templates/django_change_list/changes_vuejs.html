@@ -102,6 +102,10 @@
                         // Update Cookie
                         save_query_data(this.from_version, this.to_version, this.change_types);
                         get_change_data(this.from_version, this.to_version, this.change_types);
+                    },
+                    forceRebuild: function () {
+                        save_query_data(this.from_version, this.to_version, this.change_types);
+                        get_change_data(this.from_version, this.to_version, this.change_types, true);
                     }
                 },
             })
@@ -280,11 +284,12 @@
 
         // --------------------- AJAX QUERIES ---------------------
 
-        function get_change_data(from_version, to_version, change_types) {
+        function get_change_data(from_version, to_version, change_types, force_rebuild=false) {
             var data = {
                 'from_version': from_version,
                 'to_version': to_version,
                 'change_types': change_types,
+                'force_rebuild': force_rebuild,
             }
             $.ajaxSetup({
                 headers: {"X-CSRFToken": '{{ csrf_token }}'},
