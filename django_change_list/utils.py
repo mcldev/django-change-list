@@ -20,7 +20,7 @@ def clean_string(element, return_str=True, base_url=None):
                 if not a['href'].startswith('http'):
                     base_url = base_url if base_url.endswith('/') else base_url + '/'
                     a['href'] = "{}{}".format(base_url, a['href'])
-                    a['target'] = "_blank"
+                a['target'] = "_blank"
         str = element.prettify()
 
     encoded_string = str.encode("ascii", "ignore")
