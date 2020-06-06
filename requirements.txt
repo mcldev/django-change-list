@@ -11,7 +11,7 @@ django-classy-tags==1.0.0  # via django-sekizai
 django-crispy-forms==1.9.1  # via -r requirements.in
 django-sekizai==1.1.0     # via -r requirements.in
 django-versionfield==1.0.2  # via -r requirements.in
-django==2.2.12            # via -r requirements.in, django-sekizai
+django==2.2.13            # via -r requirements.in, django-sekizai
 idna==2.9                 # via -r requirements.in, requests
 pyparsing==2.4.7          # via -r requirements.in
 pytz==2020.1              # via -r requirements.in, django
