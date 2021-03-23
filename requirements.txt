@@ -4,19 +4,53 @@
 #
 #    pip-compile
 #
-beautifulsoup4==4.9.1     # via -r requirements.in
-certifi==2020.4.5.1       # via -r requirements.in, requests
-chardet==3.0.4            # via -r requirements.in, requests
-django-classy-tags==1.0.0  # via django-sekizai
-django-crispy-forms==1.9.1  # via -r requirements.in
-django-sekizai==1.1.0     # via -r requirements.in
-django-versionfield==1.0.2  # via -r requirements.in
-django==2.2.12            # via -r requirements.in, django-sekizai
-idna==2.9                 # via -r requirements.in, requests
-pyparsing==2.4.7          # via -r requirements.in
-pytz==2020.1              # via -r requirements.in, django
-requests==2.23.0          # via -r requirements.in
-six==1.15.0               # via -r requirements.in, django-sekizai
-soupsieve==2.0.1          # via -r requirements.in, beautifulsoup4
-sqlparse==0.3.1           # via -r requirements.in, django
-urllib3==1.25.9           # via -r requirements.in, requests
+beautifulsoup4==4.9.1
+    # via -r requirements.in
+certifi==2020.4.5.1
+    # via
+    #   -r requirements.in
+    #   requests
+chardet==3.0.4
+    # via
+    #   -r requirements.in
+    #   requests
+django-classy-tags==1.0.0
+    # via django-sekizai
+django-crispy-forms==1.9.1
+    # via -r requirements.in
+django-sekizai==1.1.0
+    # via -r requirements.in
+django-versionfield==1.0.2
+    # via -r requirements.in
+django==2.2.18
+    # via
+    #   -r requirements.in
+    #   django-sekizai
+idna==2.9
+    # via
+    #   -r requirements.in
+    #   requests
+pyparsing==2.4.7
+    # via -r requirements.in
+pytz==2020.1
+    # via
+    #   -r requirements.in
+    #   django
+requests==2.23.0
+    # via -r requirements.in
+six==1.15.0
+    # via
+    #   -r requirements.in
+    #   django-sekizai
+soupsieve==2.0.1
+    # via
+    #   -r requirements.in
+    #   beautifulsoup4
+sqlparse==0.3.1
+    # via
+    #   -r requirements.in
+    #   django
+urllib3==1.25.9
+    # via
+    #   -r requirements.in
+    #   requests
